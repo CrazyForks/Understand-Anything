@@ -158,6 +158,15 @@ Understand Anything は [Claude Code Plugin](https://code.claude.com/docs/en/plu
 
 # Karpathy パターンの LLM Wiki ナレッジベースを分析
 /understand-knowledge ~/path/to/wiki
+
+# いつでも再実行 —— デフォルトでインクリメンタル（変更ファイルのみ再分析）
+/understand
+
+# post-commit フックをインストールしてコミットごとに自動更新
+/understand --auto-update
+
+# 巨大なモノレポでも安心 —— サブディレクトリにスコープを絞る
+/understand src/frontend
 ```
 
 ---
@@ -256,6 +265,15 @@ git add .gitattributes .understand-anything/
 ---
 
 ## 🔧 内部の仕組み
+
+### Tree-sitter + LLM ハイブリッド
+
+決定論的にできることは静的解析、意味理解が必要なことは LLM、と役割を分けています：
+
+- **Tree-sitter（決定論的）** —— ソースコードを具象構文木にパースし、構造的事実を抽出します：import、export、関数／クラス定義、呼び出し位置、継承関係。スキャンフェーズで `importMap` として事前解決し、file-analyzer に渡すことで、ソースから再度 import を導出する必要をなくしています。同じ入力からは常に同じ出力が得られ、インクリメンタル更新のフィンガープリントの基盤にもなります。
+- **LLM（意味的）** —— パース済みの構造と原文ソースを併せて読み、パーサーには出せないものを生成します：plain-English の要約、タグ、アーキテクチャレイヤの割当、業務ドメインマッピング、ガイド付きツアー、言語コンセプトの注釈。
+
+この分担により、構造面ではグラフが再現可能（同じコードからは常に同じエッジが出る）でありながら、意味面ではそのファイルが「何のために」あるのかという意図を捉えられます。
 
 ### マルチエージェントパイプライン
 

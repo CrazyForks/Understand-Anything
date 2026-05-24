@@ -157,6 +157,15 @@ Understand Anything 是一個 [Claude Code Plugin](https://code.claude.com/docs/
 
 # 分析 Karpathy 模式的 LLM Wiki 知識庫
 /understand-knowledge ~/path/to/wiki
+
+# 直接重跑即可 —— 預設增量更新，只分析變更的檔案
+/understand
+
+# 安裝 post-commit 掛鉤，每次提交自動增量更新
+/understand --auto-update
+
+# 大型 monorepo？把分析範圍限定到某個子目錄
+/understand src/frontend
 ```
 
 ---
@@ -255,6 +264,15 @@ git add .gitattributes .understand-anything/
 ---
 
 ## 🔧 技術原理
+
+### Tree-sitter + LLM 混合分析
+
+把確定性的事情交給靜態分析，把需要語意理解的事情交給 LLM：
+
+- **Tree-sitter（確定性）** —— 將原始碼解析為具體語法樹，提取結構性事實：import、export、函式 / 類別定義、呼叫點、繼承關係。在 scan 階段預先解析為 `importMap` 並傳給 file-analyzer，避免它們再從原始碼推導一次 import。相同的輸入永遠得到相同的輸出，並作為增量更新的指紋基礎。
+- **LLM（語意）** —— 讀取解析後的結構以及原始碼，產生解析器做不到的事：plain-English 摘要、標籤、架構層歸屬、業務領域映射、導覽路徑、語言概念標註。
+
+正是這個分工讓圖譜在結構層面具備可重現性（同樣的程式碼總是產生同樣的邊），同時在語意層面也能捕捉意圖（一個檔案是「為了什麼」而存在，不只是它 import 了什麼）。
 
 ### 多智能體架構
 

@@ -157,6 +157,15 @@ Se abre un panel web interactivo con tu código visualizado como un grafo, codif
 
 # Analiza un wiki LLM con patrón Karpathy
 /understand-knowledge ~/path/to/wiki
+
+# Vuelve a ejecutarlo cuando quieras — incremental por defecto (solo archivos modificados)
+/understand
+
+# Instala un hook post-commit para actualizaciones incrementales automáticas
+/understand --auto-update
+
+# Acota el análisis a un subdirectorio (útil para monorepos enormes)
+/understand src/frontend
 ```
 
 ---
@@ -255,6 +264,15 @@ git add .gitattributes .understand-anything/
 ---
 
 ## 🔧 Bajo el Capó
+
+### Híbrido Tree-sitter + LLM
+
+Lo determinista lo hace el análisis estático, lo semántico lo hace el LLM:
+
+- **Tree-sitter (determinista)** — parsea el código a un árbol de sintaxis concreto y extrae hechos estructurales: imports, exports, definiciones de funciones/clases, llamadas, herencia. Se preresuelve como `importMap` en la fase de escaneo y se pasa al file-analyzer para que no tenga que volver a derivar los imports desde el código fuente. La misma entrada siempre produce la misma salida, y también es la base de los fingerprints usados para las actualizaciones incrementales.
+- **LLM (semántico)** — lee la estructura parseada junto con el código original para producir lo que los parsers no pueden: resúmenes en lenguaje natural, etiquetas, asignaciones de capa arquitectónica, mapeo de dominios de negocio, tours guiados, notas sobre conceptos del lenguaje.
+
+Esta división es la que hace que el grafo sea reproducible en lo estructural (el mismo código siempre genera las mismas aristas) y a la vez capture intención en lo semántico (para *qué* sirve un archivo, no solo qué importa).
 
 ### Pipeline Multi-Agente
 

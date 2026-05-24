@@ -158,6 +158,15 @@ Kod tabanın bir grafik olarak görselleştirilmiş, mimari katmana göre renkle
 
 # Karpathy deseni LLM Wiki bilgi tabanını analiz et
 /understand-knowledge ~/path/to/wiki
+
+# İstediğin zaman tekrar çalıştır — varsayılan olarak artımlıdır (yalnızca değişen dosyaları analiz eder)
+/understand
+
+# Her commit'te otomatik artımlı güncelleme için post-commit kancası kur
+/understand --auto-update
+
+# Devasa monorepo'larda analizi bir alt dizinle sınırla
+/understand src/frontend
 ```
 
 ---
@@ -256,6 +265,15 @@ git add .gitattributes .understand-anything/
 ---
 
 ## 🔧 Kaputun Altında
+
+### Tree-sitter + LLM hibriti
+
+Deterministik olarak yapılabilecek işleri statik analiz, anlam çıkarımı gerektiren işleri LLM üstlenir:
+
+- **Tree-sitter (deterministik)** — kaynak kodu somut sözdizimi ağacına ayrıştırır ve yapısal gerçekleri çıkarır: import'lar, export'lar, fonksiyon/sınıf tanımları, çağrı noktaları, kalıtım. Tarama aşamasında önceden çözülmüş `importMap` olarak file-analyzer'a iletilir, böylece import'ları kaynaktan tekrar türetmek zorunda kalmaz. Aynı girdi her zaman aynı çıktıyı verir; ayrıca artımlı güncellemelerin parmak izlerinin de temelidir.
+- **LLM (anlamsal)** — ayrıştırılmış yapıyı ve orijinal kaynağı birlikte okuyarak ayrıştırıcıların üretemediği şeyleri üretir: düz dilde özetler, etiketler, mimari katman atamaları, iş alanı eşlemeleri, rehberli turlar, dil kavramı notları.
+
+Bu ayrım sayesinde graf yapısal tarafta yeniden üretilebilir kalırken (aynı kod her zaman aynı kenarları üretir) anlamsal tarafta niyeti yakalayabilir (bir dosya yalnızca neyi import ettiği değil, *ne için* var olduğu da görülür).
 
 ### Çok-Ajan Hattı
 

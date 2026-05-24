@@ -159,6 +159,15 @@ An interactive web dashboard opens with your codebase visualized as a graph — 
 
 # Analyze a Karpathy-pattern LLM wiki knowledge base
 /understand-knowledge ~/path/to/wiki
+
+# Re-run anytime — incremental by default (only re-analyzes changed files)
+/understand
+
+# Auto-update on every commit via a post-commit hook
+/understand --auto-update
+
+# Scope to a subdirectory (for huge monorepos)
+/understand src/frontend
 ```
 
 ---
@@ -257,6 +266,15 @@ git add .gitattributes .understand-anything/
 ---
 
 ## 🔧 Under the Hood
+
+### Tree-sitter + LLM hybrid
+
+Static analysis and LLMs do what each does best:
+
+- **Tree-sitter (deterministic)** — parses source into a concrete syntax tree and extracts structural facts: imports, exports, function/class definitions, call sites, inheritance. Pre-resolved into an `importMap` during the scan phase and passed to file-analyzers so they don't re-derive imports from source. Same input → same output, every run. Also powers fingerprint-based change detection for incremental updates.
+- **LLM (semantic)** — reads the parsed structure alongside the original source to produce what parsers can't: plain-English summaries, tags, architectural layer assignments, business-domain mapping, guided tours, language concept callouts.
+
+This split is why the graph is reproducible on the structural side (the same code always yields the same edges) while still capturing intent on the semantic side (what a file is *for*, not just what it imports).
 
 ### Multi-Agent Pipeline
 

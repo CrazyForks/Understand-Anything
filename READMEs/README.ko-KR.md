@@ -157,6 +157,15 @@ Understand Anything은 [Claude Code Plugin](https://code.claude.com/docs/en/plug
 
 # Karpathy 패턴 LLM 위키 지식 베이스 분석
 /understand-knowledge ~/path/to/wiki
+
+# 언제든 다시 실행 — 기본값은 증분 업데이트(변경된 파일만 재분석)
+/understand
+
+# post-commit 훅을 설치해 매 커밋마다 자동 증분 업데이트
+/understand --auto-update
+
+# 거대한 모노레포라면 하위 디렉터리로 범위 제한
+/understand src/frontend
 ```
 
 ---
@@ -255,6 +264,15 @@ git add .gitattributes .understand-anything/
 ---
 
 ## 🔧 작동 원리
+
+### Tree-sitter + LLM 하이브리드
+
+결정적으로 처리할 수 있는 일은 정적 분석이, 의미 이해가 필요한 일은 LLM 이 담당합니다:
+
+- **Tree-sitter(결정적)** — 소스 코드를 구체 구문 트리로 파싱해 구조적 사실을 추출합니다: import, export, 함수/클래스 정의, 호출 위치, 상속. 스캔 단계에서 `importMap` 으로 사전 해석해 file-analyzer 에 전달하므로, 소스에서 다시 import 를 유도할 필요가 없습니다. 같은 입력은 항상 같은 출력을 내며, 증분 업데이트의 핑거프린트 기반이기도 합니다.
+- **LLM(의미적)** — 파싱된 구조와 원본 소스를 함께 읽어 파서가 만들 수 없는 것들을 생성합니다: plain-English 요약, 태그, 아키텍처 레이어 할당, 비즈니스 도메인 매핑, 가이드 투어, 언어 개념 주석.
+
+이 분담 덕분에 그래프는 구조 측면에서는 재현 가능하면서(같은 코드는 항상 같은 엣지를 만든다), 의미 측면에서는 의도를 포착할 수 있습니다(파일이 단지 무엇을 import 하는지가 아니라 *무엇을 위해* 존재하는지).
 
 ### 멀티 에이전트 파이프라인
 
