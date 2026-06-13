@@ -219,4 +219,35 @@ describe("DartExtractor", () => {
       parser.delete();
     });
   });
+
+  describe("extractStructure - extensions", () => {
+    it("extracts a named extension on String", () => {
+      const { tree, parser, root } = parse(`extension StringX on String {
+  String shout() => toUpperCase() + '!';
+}
+`);
+      const result = extractor.extractStructure(root);
+
+      expect(result.classes).toHaveLength(1);
+      expect(result.classes[0].name).toBe("StringX");
+      expect(result.classes[0].methods).toContain("shout");
+      tree.delete();
+      parser.delete();
+    });
+
+    it("names an anonymous extension after its target type", () => {
+      const { tree, parser, root } = parse(`extension on int {
+  int squared() => this * this;
+}
+`);
+      const result = extractor.extractStructure(root);
+
+      expect(result.classes).toHaveLength(1);
+      // Anonymous extension on int → "on int" so it isn't dropped.
+      expect(result.classes[0].name).toBe("on int");
+      expect(result.classes[0].methods).toContain("squared");
+      tree.delete();
+      parser.delete();
+    });
+  });
 });

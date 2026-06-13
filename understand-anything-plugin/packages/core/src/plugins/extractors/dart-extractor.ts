@@ -238,6 +238,9 @@ export class DartExtractor implements LanguageExtractor {
         case "mixin_declaration":
           this.extractClassLikeDeclaration(node, "class_body", classes, functions, exports);
           break;
+        case "extension_declaration":
+          this.extractExtensionDeclaration(node, classes, functions, exports);
+          break;
       }
     }
 
@@ -270,9 +273,9 @@ export class DartExtractor implements LanguageExtractor {
    * `extension_declaration`. The only difference between these shapes is the
    * body's node type name, which is passed in via `bodyNodeType`.
    *
-   * Anonymous variants (e.g. `extension on Foo` with no name) are handled by
-   * the caller — this method requires `declNode` to have a leading
-   * `identifier` child for the name.
+   * When `nameOverride` is provided, it is used as the entry's name instead of
+   * looking up a leading `identifier` child — used by anonymous extensions,
+   * which have no name in the source.
    */
   private extractClassLikeDeclaration(
     declNode: TreeSitterNode,
@@ -280,10 +283,16 @@ export class DartExtractor implements LanguageExtractor {
     classes: StructuralAnalysis["classes"],
     functions: StructuralAnalysis["functions"],
     exports: StructuralAnalysis["exports"],
+    nameOverride?: string,
   ): void {
-    const nameNode = findChild(declNode, "identifier");
-    if (!nameNode) return;
-    const name = nameNode.text;
+    let name: string;
+    if (nameOverride !== undefined) {
+      name = nameOverride;
+    } else {
+      const nameNode = findChild(declNode, "identifier");
+      if (!nameNode) return;
+      name = nameNode.text;
+    }
 
     const methods: string[] = [];
     const properties: string[] = [];
@@ -303,6 +312,40 @@ export class DartExtractor implements LanguageExtractor {
     if (isExported(name)) {
       exports.push({ name, lineNumber: declNode.startPosition.row + 1 });
     }
+  }
+
+  private extractExtensionDeclaration(
+    declNode: TreeSitterNode,
+    classes: StructuralAnalysis["classes"],
+    functions: StructuralAnalysis["functions"],
+    exports: StructuralAnalysis["exports"],
+  ): void {
+    // Named extension — extractClassLikeDeclaration finds the leading identifier itself.
+    const idNode = findChild(declNode, "identifier");
+    if (idNode) {
+      this.extractClassLikeDeclaration(
+        declNode,
+        "extension_body",
+        classes,
+        functions,
+        exports,
+      );
+      return;
+    }
+
+    // Anonymous extension — no `identifier` child. The on-type is the first
+    // `type_identifier`. Name the entry "on <TargetType>" so the graph
+    // builder doesn't drop it for having an empty name.
+    const onType = findChild(declNode, "type_identifier");
+    if (!onType) return;
+    this.extractClassLikeDeclaration(
+      declNode,
+      "extension_body",
+      classes,
+      functions,
+      exports,
+      `on ${onType.text}`,
+    );
   }
 
   extractCallGraph(rootNode: TreeSitterNode): CallGraphEntry[] {
